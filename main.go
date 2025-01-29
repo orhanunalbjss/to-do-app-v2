@@ -18,21 +18,41 @@ type Item struct {
 
 var Items []Item
 
+func (item Item) String() string {
+	return fmt.Sprintf("Name: %s, Description: %s, Status: %s", item.Name, item.Description, item.Status)
+}
+
 func main() {
 	loadItemsFromDisk()
 
-	nameFlag := flag.String("name", "Buy a new backpack", "item name")
-	descriptionFlag := flag.String("description", "Prefer red or blue", "item description")
-	statusFlag := flag.String("status", "Not Started", "item status")
+	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	addName := addCmd.String("name", "", "item name")
+	addDescription := addCmd.String("description", "", "item description")
+	addStatus := addCmd.String("status", "", "item status")
 
-	flag.Parse()
+	if len(os.Args) < 2 {
+		log.Fatal("Expected 'add' subcommand")
+	}
 
-	item := Item{Name: *nameFlag, Description: *descriptionFlag, Status: *statusFlag}
-	Items = append(Items, item)
+	switch os.Args[1] {
+	case "add":
+		if err := addCmd.Parse(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		Items = append(Items, Item{*addName, *addDescription, *addStatus})
+	default:
+		log.Fatal("Expected 'add' subcommand'")
+	}
 
-	fmt.Println(Items)
+	printItems()
 
 	saveItemsToDisk()
+}
+
+func printItems() {
+	for _, item := range Items {
+		fmt.Println(item)
+	}
 }
 
 func loadItemsFromDisk() {
