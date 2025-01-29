@@ -36,6 +36,9 @@ func main() {
 	updateDescription := updateCmd.String("description", "", "item description")
 	updateStatus := updateCmd.String("status", "", "item status")
 
+	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
+	deleteId := deleteCmd.Int("id", 0, "item id")
+
 	if len(os.Args) < 2 {
 		log.Fatal("Expected 'add' or 'update' subcommands")
 	}
@@ -55,7 +58,7 @@ func main() {
 		}
 
 		if *updateId < 1 || *updateId > len(Items) {
-			log.Fatal("Invalid id: *updateId")
+			log.Fatal("Invalid id: ", *updateId)
 		}
 
 		Items[*updateId-1].Name = *updateName
@@ -63,6 +66,19 @@ func main() {
 		Items[*updateId-1].Status = *updateStatus
 
 		fmt.Println("Item updated")
+	case "delete":
+		if err := deleteCmd.Parse(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+
+		if *deleteId < 1 || *deleteId > len(Items) {
+			log.Fatal("Invalid id: ", *deleteId)
+		}
+
+		Items = append(Items[:*deleteId-1], Items[*deleteId:]...)
+
+		fmt.Println("Item deleted")
+
 	default:
 		log.Fatal("Expected 'add' subcommand'")
 	}
