@@ -40,58 +40,33 @@ func main() {
 	deleteId := deleteCmd.Int("id", 0, "item id")
 
 	if len(os.Args) < 2 {
-		log.Fatal("Expected 'add' or 'update' subcommands")
+		log.Fatal("Expected 'add', 'list', 'update' or 'delete' subcommands")
 	}
 
 	switch os.Args[1] {
 	case "add":
-		if err := addCmd.Parse(os.Args[2:]); err != nil {
-			log.Fatal(err)
-		}
-
-		Items = append(Items, Item{*addName, *addDescription, *addStatus})
-
+		parseSubcommands(addCmd)
+		addItem(addName, addDescription, addStatus)
 		fmt.Println("Item added")
+		listItems()
 	case "list":
-		printItems()
+		listItems()
 	case "update":
-		if err := updateCmd.Parse(os.Args[2:]); err != nil {
-			log.Fatal(err)
-		}
-
-		if *updateId < 1 || *updateId > len(Items) {
-			log.Fatal("Invalid id: ", *updateId)
-		}
-
-		Items[*updateId-1].Name = *updateName
-		Items[*updateId-1].Description = *updateDescription
-		Items[*updateId-1].Status = *updateStatus
-
+		parseSubcommands(updateCmd)
+		updateItem(updateId, updateName, updateDescription, updateStatus)
 		fmt.Println("Item updated")
+		listItems()
 	case "delete":
-		if err := deleteCmd.Parse(os.Args[2:]); err != nil {
-			log.Fatal(err)
-		}
-
-		if *deleteId < 1 || *deleteId > len(Items) {
-			log.Fatal("Invalid id: ", *deleteId)
-		}
-
-		Items = append(Items[:*deleteId-1], Items[*deleteId:]...)
-
+		parseSubcommands(deleteCmd)
+		deleteItem(deleteId)
 		fmt.Println("Item deleted")
+		listItems()
 
 	default:
 		log.Fatal("Expected 'add' subcommand'")
 	}
 
 	saveItemsToDisk()
-}
-
-func printItems() {
-	for index, item := range Items {
-		fmt.Printf("%d: %s\n", index+1, item)
-	}
 }
 
 func loadItemsFromDisk() {
@@ -109,6 +84,42 @@ func loadItemsFromDisk() {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&Items); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func parseSubcommands(cmd *flag.FlagSet) {
+	if err := cmd.Parse(os.Args[2:]); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func addItem(addName *string, addDescription *string, addStatus *string) {
+	Items = append(Items, Item{*addName, *addDescription, *addStatus})
+}
+
+func listItems() {
+	for index, item := range Items {
+		fmt.Printf("%d: %s\n", index+1, item)
+	}
+}
+
+func updateItem(updateId *int, updateName *string, updateDescription *string, updateStatus *string) {
+	validateId(updateId)
+
+	Items[*updateId-1].Name = *updateName
+	Items[*updateId-1].Description = *updateDescription
+	Items[*updateId-1].Status = *updateStatus
+}
+
+func deleteItem(deleteId *int) {
+	validateId(deleteId)
+
+	Items = append(Items[:*deleteId-1], Items[*deleteId:]...)
+}
+
+func validateId(id *int) {
+	if *id < 1 || *id > len(Items) {
+		log.Fatal("Invalid id: ", *id)
 	}
 }
 
