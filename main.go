@@ -63,7 +63,7 @@ func main() {
 		listItems()
 
 	default:
-		log.Fatal("Expected 'add' subcommand'")
+		log.Fatal("Expected 'add', 'list', 'update' or 'delete' subcommands")
 	}
 
 	saveItemsToDisk()
