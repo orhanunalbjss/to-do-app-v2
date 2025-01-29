@@ -30,8 +30,14 @@ func main() {
 	addDescription := addCmd.String("description", "", "item description")
 	addStatus := addCmd.String("status", "", "item status")
 
+	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
+	updateId := updateCmd.Int("id", 0, "item id")
+	updateName := updateCmd.String("name", "", "item name")
+	updateDescription := updateCmd.String("description", "", "item description")
+	updateStatus := updateCmd.String("status", "", "item status")
+
 	if len(os.Args) < 2 {
-		log.Fatal("Expected 'add' subcommand")
+		log.Fatal("Expected 'add' or 'update' subcommands")
 	}
 
 	switch os.Args[1] {
@@ -39,7 +45,24 @@ func main() {
 		if err := addCmd.Parse(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
+
 		Items = append(Items, Item{*addName, *addDescription, *addStatus})
+
+		fmt.Println("Item added")
+	case "update":
+		if err := updateCmd.Parse(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+
+		if *updateId < 1 || *updateId > len(Items) {
+			log.Fatal("Invalid id: *updateId")
+		}
+
+		Items[*updateId-1].Name = *updateName
+		Items[*updateId-1].Description = *updateDescription
+		Items[*updateId-1].Status = *updateStatus
+
+		fmt.Println("Item updated")
 	default:
 		log.Fatal("Expected 'add' subcommand'")
 	}
@@ -50,8 +73,8 @@ func main() {
 }
 
 func printItems() {
-	for _, item := range Items {
-		fmt.Println(item)
+	for index, item := range Items {
+		fmt.Printf("%d: %s\n", index+1, item)
 	}
 }
 
