@@ -52,6 +52,8 @@ func main() {
 		Items = append(Items, Item{*addName, *addDescription, *addStatus})
 
 		fmt.Println("Item added")
+	case "list":
+		printItems()
 	case "update":
 		if err := updateCmd.Parse(os.Args[2:]); err != nil {
 			log.Fatal(err)
@@ -82,8 +84,6 @@ func main() {
 	default:
 		log.Fatal("Expected 'add' subcommand'")
 	}
-
-	printItems()
 
 	saveItemsToDisk()
 }
