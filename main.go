@@ -116,43 +116,49 @@ func logErrorAndExit(ctx context.Context, err error, message string) {
 
 func processAddCommand(args []string) error {
 	var err error
+
 	if err = addFlagSet.Parse(args); err != nil {
 		return errors.Wrapf(err, "failed to parse arguments: %v", args)
 	}
-	addItem(addName, addDescription, addStatus)
+	addItem(*addName, *addDescription, *addStatus)
 	listItems()
 	err = saveItems()
+
 	return errors.Wrap(err, "failed to save items")
 }
 
 func processUpdateCommand(args []string) error {
 	var err error
+
 	if err = updateFlagSet.Parse(args); err != nil {
 		return errors.Wrapf(err, "failed to parse arguments: %v", args)
 	}
-	if err = updateItem(updateId, updateName, updateDescription, updateStatus); err != nil {
+	if err = updateItem(*updateId, *updateName, *updateDescription, *updateStatus); err != nil {
 		return errors.Wrap(err, "failed to update item")
 	}
 	listItems()
 	err = saveItems()
+
 	return errors.Wrap(err, "failed to save items")
 }
 
 func processDeleteCommand(args []string) error {
 	var err error
+
 	if err = deleteFlagSet.Parse(args); err != nil {
 		return errors.Wrapf(err, "failed to parse arguments: %v", args)
 	}
-	if err = deleteItem(deleteId); err != nil {
+	if err = deleteItem(*deleteId); err != nil {
 		return errors.Wrap(err, "failed to delete item")
 	}
 	listItems()
 	err = saveItems()
+
 	return errors.Wrap(err, "failed to save items")
 }
 
-func addItem(name *string, description *string, status *string) {
-	Items = append(Items, Item{*name, *description, *status})
+func addItem(name string, description string, status string) {
+	Items = append(Items, Item{name, description, status})
 }
 
 func listItems() {
@@ -161,30 +167,30 @@ func listItems() {
 	}
 }
 
-func updateItem(id *int, name *string, description *string, status *string) error {
+func updateItem(id int, name string, description string, status string) error {
 	if !isValidId(id) {
-		return fmt.Errorf("invalid id: %d", *id)
+		return fmt.Errorf("invalid id: %d", id)
 	}
 
-	Items[*id-1].Name = *name
-	Items[*id-1].Description = *description
-	Items[*id-1].Status = *status
+	Items[id-1].Name = name
+	Items[id-1].Description = description
+	Items[id-1].Status = status
 
 	return nil
 }
 
-func deleteItem(id *int) error {
+func deleteItem(id int) error {
 	if !isValidId(id) {
-		return fmt.Errorf("invalid id: %d", *id)
+		return fmt.Errorf("invalid id: %d", id)
 	}
 
-	Items = append(Items[:*id-1], Items[*id:]...)
+	Items = append(Items[:id-1], Items[id:]...)
 
 	return nil
 }
 
-func isValidId(id *int) bool {
-	return id != nil && *id >= 1 && *id <= len(Items)
+func isValidId(id int) bool {
+	return id >= 1 && id <= len(Items)
 }
 
 func loadItems() (err error) {
