@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const ItemsFilename = "items.json"
@@ -100,6 +102,10 @@ func main() {
 		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
 		os.Exit(1)
 	}
+
+	quitChannel := make(chan os.Signal, 1)
+	signal.Notify(quitChannel, syscall.SIGINT)
+	<-quitChannel
 }
 
 func logErrorAndExit(ctx context.Context, err error, message string) {
