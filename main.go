@@ -1,16 +1,28 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"log"
 	"log/slog"
 	"os"
 )
 
 const ItemsFilename = "items.json"
+
+type ContextHandler struct {
+	slog.Handler
+}
+
+func (handler *ContextHandler) Handle(context context.Context, record slog.Record) error {
+	if traceId, ok := context.Value("TraceID").(string); ok {
+		record.AddAttrs(slog.String("TraceID", traceId))
+	}
+	return handler.Handler.Handle(context, record)
+}
 
 type Item struct {
 	Name        string `json:"name"`
@@ -40,20 +52,27 @@ var (
 	deleteId      = deleteFlagSet.Int("id", 0, "item id")
 )
 
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
 func main() {
 	var err error
 
+	var handler slog.Handler
+	handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+	})
+	handler = &ContextHandler{handler}
+
+	slog.SetDefault(slog.New(handler))
+
+	traceId := uuid.NewString()
+	ctx := context.WithValue(context.Background(), "TraceID", traceId)
+
 	if len(os.Args) < 2 {
-		slog.Error("expected one of the following commands: add, list, update, delete")
+		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
 		os.Exit(1)
 	}
 
 	if err = loadItems(); err != nil {
-		logErrorAndExit(err, "failed to load items")
+		logErrorAndExit(ctx, err, "failed to load items")
 	}
 
 	command := os.Args[1]
@@ -62,30 +81,30 @@ func main() {
 	switch command {
 	case "add":
 		if err = processAddCommand(commandArgs); err != nil {
-			logErrorAndExit(err, "failed to process add command")
+			logErrorAndExit(ctx, err, "failed to process add command")
 		}
-		slog.Info("item added")
+		slog.InfoContext(ctx, "item added")
 	case "list":
 		listItems()
 	case "update":
 		if err = processUpdateCommand(commandArgs); err != nil {
-			logErrorAndExit(err, "failed to process update command")
+			logErrorAndExit(ctx, err, "failed to process update command")
 		}
-		slog.Info("item updated")
+		slog.InfoContext(ctx, "item updated")
 	case "delete":
 		if err = processDeleteCommand(commandArgs); err != nil {
-			logErrorAndExit(err, "failed to process delete command")
+			logErrorAndExit(ctx, err, "failed to process delete command")
 		}
-		slog.Info("item deleted")
+		slog.InfoContext(ctx, "item deleted")
 	default:
-		slog.Error("expected one of the following commands: add, list, update, delete")
+		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
 		os.Exit(1)
 	}
 }
 
-func logErrorAndExit(err error, message string) {
+func logErrorAndExit(ctx context.Context, err error, message string) {
 	err = errors.Wrap(err, message)
-	slog.Error(err.Error())
+	slog.ErrorContext(ctx, err.Error())
 	os.Exit(1)
 }
 
