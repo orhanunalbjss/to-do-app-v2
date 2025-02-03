@@ -54,23 +54,31 @@ func main() {
 	switch cmd {
 	case "add":
 		if err = addCommand(cmdArgs); err != nil {
-			logErrorAndExit(ctx, err, "add command")
+			err = errors.Wrap(err, "add command")
+			slog.ErrorContext(ctx, err.Error())
+			return
 		}
 
 		slog.InfoContext(ctx, "item added")
 	case "list":
 		if err = listCommand(); err != nil {
-			logErrorAndExit(ctx, err, "list command")
+			err = errors.Wrap(err, "list command")
+			slog.ErrorContext(ctx, err.Error())
+			return
 		}
 	case "update":
 		if err = updateCommand(cmdArgs); err != nil {
-			logErrorAndExit(ctx, err, "update command")
+			err = errors.Wrap(err, "update command")
+			slog.ErrorContext(ctx, err.Error())
+			return
 		}
 
 		slog.InfoContext(ctx, "item updated")
 	case "delete":
 		if err = deleteCommand(cmdArgs); err != nil {
-			logErrorAndExit(ctx, err, "delete command")
+			err = errors.Wrap(err, "add command")
+			slog.ErrorContext(ctx, err.Error())
+			return
 		}
 
 		slog.InfoContext(ctx, "item deleted")
@@ -95,12 +103,6 @@ func setNewDefaultLogger() {
 	handler = &ContextHandler{handler}
 
 	slog.SetDefault(slog.New(handler))
-}
-
-func logErrorAndExit(ctx context.Context, err error, message string) {
-	err = errors.Wrap(err, message)
-	slog.ErrorContext(ctx, err.Error())
-	os.Exit(1)
 }
 
 func addCommand(args []string) error {
