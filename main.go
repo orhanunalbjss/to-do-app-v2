@@ -7,13 +7,20 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"io/fs"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
-const ItemsFilename = "items.json"
+type Item struct {
+	Name   string `json:"name"`
+	Desc   string `json:"description"`
+	Status string `json:"status"`
+}
+
+func (item Item) String() string {
+	return fmt.Sprintf("Name: %s, Description: %s, Status: %s", item.Name, item.Desc, item.Status)
+}
 
 type ContextHandler struct {
 	slog.Handler
@@ -26,37 +33,61 @@ func (handler *ContextHandler) Handle(context context.Context, record slog.Recor
 	return handler.Handler.Handle(context, record)
 }
 
-type Item struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-}
-
-func (item Item) String() string {
-	return fmt.Sprintf("Name: %s, Description: %s, Status: %s", item.Name, item.Description, item.Status)
-}
+const ItemsFilename = "items.json"
 
 var Items []Item
 
-var (
-	addFlagSet     = flag.NewFlagSet("add", flag.ExitOnError)
-	addName        = addFlagSet.String("name", "", "item name")
-	addDescription = addFlagSet.String("description", "", "item description")
-	addStatus      = addFlagSet.String("status", "", "item status")
-
-	updateFlagSet     = flag.NewFlagSet("update", flag.ExitOnError)
-	updateId          = updateFlagSet.Int("id", 0, "item id")
-	updateName        = updateFlagSet.String("name", "", "item name")
-	updateDescription = updateFlagSet.String("description", "", "item description")
-	updateStatus      = updateFlagSet.String("status", "", "item status")
-
-	deleteFlagSet = flag.NewFlagSet("delete", flag.ExitOnError)
-	deleteId      = deleteFlagSet.Int("id", 0, "item id")
-)
-
 func main() {
 	var err error
+	ctx := context.WithValue(context.Background(), "TraceID", uuid.NewString())
 
+	setNewDefaultLogger()
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 0 {
+		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
+		os.Exit(1)
+	}
+
+	cmd, cmdArgs := args[0], args[1:]
+	switch cmd {
+	case "add":
+		if err = addCommand(cmdArgs); err != nil {
+			logErrorAndExit(ctx, err, "add command")
+		}
+
+		slog.InfoContext(ctx, "item added")
+	case "list":
+		if err = listCommand(); err != nil {
+			logErrorAndExit(ctx, err, "list command")
+		}
+	case "update":
+		if err = updateCommand(cmdArgs); err != nil {
+			logErrorAndExit(ctx, err, "update command")
+		}
+
+		slog.InfoContext(ctx, "item updated")
+	case "delete":
+		if err = deleteCommand(cmdArgs); err != nil {
+			logErrorAndExit(ctx, err, "delete command")
+		}
+
+		slog.InfoContext(ctx, "item deleted")
+	default:
+		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
+		os.Exit(1)
+	}
+
+	// Keep app running until SIGINT (CTRL+C) signal is sent
+	/*
+		quitChannel := make(chan os.Signal, 1)
+		signal.Notify(quitChannel, syscall.SIGINT)
+		<-quitChannel
+	*/
+}
+
+func setNewDefaultLogger() {
 	var handler slog.Handler
 	handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
@@ -64,48 +95,6 @@ func main() {
 	handler = &ContextHandler{handler}
 
 	slog.SetDefault(slog.New(handler))
-
-	traceId := uuid.NewString()
-	ctx := context.WithValue(context.Background(), "TraceID", traceId)
-
-	if len(os.Args) < 2 {
-		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
-		os.Exit(1)
-	}
-
-	if err = loadItems(); err != nil {
-		logErrorAndExit(ctx, err, "failed to load items")
-	}
-
-	command := os.Args[1]
-	commandArgs := os.Args[2:]
-
-	switch command {
-	case "add":
-		if err = processAddCommand(commandArgs); err != nil {
-			logErrorAndExit(ctx, err, "failed to process add command")
-		}
-		slog.InfoContext(ctx, "item added")
-	case "list":
-		listItems()
-	case "update":
-		if err = processUpdateCommand(commandArgs); err != nil {
-			logErrorAndExit(ctx, err, "failed to process update command")
-		}
-		slog.InfoContext(ctx, "item updated")
-	case "delete":
-		if err = processDeleteCommand(commandArgs); err != nil {
-			logErrorAndExit(ctx, err, "failed to process delete command")
-		}
-		slog.InfoContext(ctx, "item deleted")
-	default:
-		slog.ErrorContext(ctx, "expected one of the following commands: add, list, update, delete")
-		os.Exit(1)
-	}
-
-	quitChannel := make(chan os.Signal, 1)
-	signal.Notify(quitChannel, syscall.SIGINT)
-	<-quitChannel
 }
 
 func logErrorAndExit(ctx context.Context, err error, message string) {
@@ -114,51 +103,109 @@ func logErrorAndExit(ctx context.Context, err error, message string) {
 	os.Exit(1)
 }
 
-func processAddCommand(args []string) error {
+func addCommand(args []string) error {
 	var err error
 
-	if err = addFlagSet.Parse(args); err != nil {
-		return errors.Wrapf(err, "failed to parse arguments: %v", args)
+	cmd := flag.NewFlagSet("add", flag.ExitOnError)
+	var (
+		name, desc, status string
+	)
+
+	cmd.StringVar(&name, "name", "", "item name")
+	cmd.StringVar(&desc, "description", "", "item description")
+	cmd.StringVar(&status, "status", "", "item status")
+
+	if err = cmd.Parse(args); err != nil {
+		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
-	addItem(*addName, *addDescription, *addStatus)
+
+	if err = loadItems(); err != nil {
+		return errors.Wrap(err, "load items")
+	}
+
+	item := Item{Name: name, Desc: desc, Status: status}
+
+	addItem(item)
+	listItems()
+	if err = saveItems(); err != nil {
+		return errors.Wrap(err, "save items")
+	}
+
+	return nil
+}
+
+func listCommand() error {
+	var err error
+
+	if err = loadItems(); err != nil {
+		return errors.Wrap(err, "load items")
+	}
+
+	listItems()
+
+	return nil
+}
+
+func updateCommand(args []string) error {
+	var err error
+
+	cmd := flag.NewFlagSet("update", flag.ExitOnError)
+	var (
+		id                 int
+		name, desc, status string
+	)
+
+	cmd.IntVar(&id, "id", 0, "item id")
+	cmd.StringVar(&name, "name", "", "item name")
+	cmd.StringVar(&desc, "description", "", "item description")
+	cmd.StringVar(&status, "status", "", "item status")
+
+	if err = cmd.Parse(args); err != nil {
+		return errors.Wrapf(err, "parse arguments: %v", args)
+	}
+
+	if err = loadItems(); err != nil {
+		return errors.Wrap(err, "load items")
+	}
+
+	item := Item{Name: name, Desc: desc, Status: status}
+
+	if err = updateItem(id, item); err != nil {
+		return errors.Wrap(err, "update item")
+	}
 	listItems()
 	err = saveItems()
 
-	return errors.Wrap(err, "failed to save items")
+	return errors.Wrap(err, "save items")
 }
 
-func processUpdateCommand(args []string) error {
+func deleteCommand(args []string) error {
 	var err error
 
-	if err = updateFlagSet.Parse(args); err != nil {
-		return errors.Wrapf(err, "failed to parse arguments: %v", args)
+	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
+
+	var id int
+	cmd.IntVar(&id, "id", 0, "item id")
+
+	if err = cmd.Parse(args); err != nil {
+		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
-	if err = updateItem(*updateId, *updateName, *updateDescription, *updateStatus); err != nil {
-		return errors.Wrap(err, "failed to update item")
+
+	if err = loadItems(); err != nil {
+		return errors.Wrap(err, "load items")
+	}
+
+	if err = deleteItem(id); err != nil {
+		return errors.Wrap(err, "delete item")
 	}
 	listItems()
 	err = saveItems()
 
-	return errors.Wrap(err, "failed to save items")
+	return errors.Wrap(err, "save items")
 }
 
-func processDeleteCommand(args []string) error {
-	var err error
-
-	if err = deleteFlagSet.Parse(args); err != nil {
-		return errors.Wrapf(err, "failed to parse arguments: %v", args)
-	}
-	if err = deleteItem(*deleteId); err != nil {
-		return errors.Wrap(err, "failed to delete item")
-	}
-	listItems()
-	err = saveItems()
-
-	return errors.Wrap(err, "failed to save items")
-}
-
-func addItem(name string, description string, status string) {
-	Items = append(Items, Item{name, description, status})
+func addItem(item Item) {
+	Items = append(Items, item)
 }
 
 func listItems() {
@@ -167,14 +214,14 @@ func listItems() {
 	}
 }
 
-func updateItem(id int, name string, description string, status string) error {
+func updateItem(id int, item Item) error {
 	if !isValidId(id) {
 		return fmt.Errorf("invalid id: %d", id)
 	}
 
-	Items[id-1].Name = name
-	Items[id-1].Description = description
-	Items[id-1].Status = status
+	Items[id-1].Name = item.Name
+	Items[id-1].Desc = item.Desc
+	Items[id-1].Status = item.Status
 
 	return nil
 }
@@ -197,38 +244,47 @@ func loadItems() (err error) {
 	var file *os.File
 	file, err = os.Open(ItemsFilename)
 	if err != nil {
-		return errors.Wrapf(err, "failed to open %s", ItemsFilename)
+		if errors.Is(err, fs.ErrNotExist) {
+			Items = make([]Item, 0)
+			if err = saveItems(); err != nil {
+				return errors.Wrap(err, "save items")
+			}
+
+			return
+		}
+
+		return errors.Wrapf(err, "open %s", ItemsFilename)
 	}
 
 	defer func() {
 		closeError := file.Close()
-		if closeError == nil {
-			err = errors.Wrapf(err, "failed to close %s", ItemsFilename)
+		if err == nil {
+			err = closeError
 		}
 	}()
 
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&Items)
 
-	return errors.Wrapf(err, "failed to decode %s", ItemsFilename)
+	return errors.Wrapf(err, "decode %s", ItemsFilename)
 }
 
 func saveItems() (err error) {
 	var file *os.File
 	file, err = os.Create(ItemsFilename)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create %s", ItemsFilename)
+		return errors.Wrapf(err, "create %s", ItemsFilename)
 	}
 
 	defer func() {
 		closeError := file.Close()
 		if err == nil {
-			err = errors.Wrapf(closeError, "failed to close %s", ItemsFilename)
+			err = errors.Wrapf(closeError, "close %s", ItemsFilename)
 		}
 	}()
 
 	encoder := json.NewEncoder(file)
 	err = encoder.Encode(Items)
 
-	return errors.Wrapf(err, "failed to encode %s", ItemsFilename)
+	return errors.Wrapf(err, "encode %s", ItemsFilename)
 }
