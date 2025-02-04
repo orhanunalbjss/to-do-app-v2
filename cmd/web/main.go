@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	js "to-do-app-v2/pkg/jsonstore"
+	"to-do-app-v2/pkg/store"
 )
 
 type ContextHandler struct {
@@ -52,7 +52,7 @@ func setNewDefaultLogger() {
 
 func addItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var item js.Item
+		var item store.Item
 
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&item); err != nil {
@@ -62,16 +62,16 @@ func addItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := js.LoadItems(); err != nil {
+		if err := store.LoadItems(); err != nil {
 			err = errors.Wrap(err, "load items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
 			return
 		}
 
-		js.AddItem(item)
+		store.AddItem(item)
 
-		if err := js.SaveItems(); err != nil {
+		if err := store.SaveItems(); err != nil {
 			err = errors.Wrap(err, "save items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
@@ -84,7 +84,7 @@ func addItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 
 func getItems(ctx context.Context) func(w http.ResponseWriter, _ *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := js.LoadItems(); err != nil {
+		if err := store.LoadItems(); err != nil {
 			err = errors.Wrap(err, "load items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
@@ -92,7 +92,7 @@ func getItems(ctx context.Context) func(w http.ResponseWriter, _ *http.Request) 
 		}
 
 		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(js.Items); err != nil {
+		if err := encoder.Encode(store.Items); err != nil {
 			err = errors.Wrap(err, "encode items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
@@ -111,7 +111,7 @@ func updateItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		var item js.Item
+		var item store.Item
 		decoder := json.NewDecoder(r.Body)
 		if err = decoder.Decode(&item); err != nil {
 			err = errors.Wrap(err, "decode item")
@@ -120,14 +120,14 @@ func updateItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		if err = js.LoadItems(); err != nil {
+		if err = store.LoadItems(); err != nil {
 			err = errors.Wrap(err, "load items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
 			return
 		}
 
-		err = js.UpdateItem(id, item)
+		err = store.UpdateItem(id, item)
 		if err != nil {
 			err = errors.Wrap(err, "update item")
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -135,7 +135,7 @@ func updateItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		if err = js.SaveItems(); err != nil {
+		if err = store.SaveItems(); err != nil {
 			err = errors.Wrap(err, "save items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
@@ -154,14 +154,14 @@ func deleteItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		if err = js.LoadItems(); err != nil {
+		if err = store.LoadItems(); err != nil {
 			err = errors.Wrap(err, "load items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())
 			return
 		}
 
-		err = js.DeleteItem(id)
+		err = store.DeleteItem(id)
 		if err != nil {
 			err = errors.Wrap(err, "delete item")
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -169,7 +169,7 @@ func deleteItem(ctx context.Context) func(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		if err = js.SaveItems(); err != nil {
+		if err = store.SaveItems(); err != nil {
 			err = errors.Wrap(err, "save items")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			slog.ErrorContext(ctx, err.Error())

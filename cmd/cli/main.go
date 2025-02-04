@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"log/slog"
 	"os"
-	js "to-do-app-v2/pkg/jsonstore"
+	"to-do-app-v2/pkg/store"
 )
 
 type ContextHandler struct {
@@ -104,15 +104,15 @@ func addCommand(args []string) error {
 		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
 
-	if err = js.LoadItems(); err != nil {
+	if err = store.LoadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
 
-	item := js.Item{Name: name, Desc: desc, Status: status}
+	item := store.Item{Name: name, Desc: desc, Status: status}
 
-	js.AddItem(item)
-	js.ListItems()
-	if err = js.SaveItems(); err != nil {
+	store.AddItem(item)
+	store.ListItems()
+	if err = store.SaveItems(); err != nil {
 		return errors.Wrap(err, "save items")
 	}
 
@@ -122,11 +122,11 @@ func addCommand(args []string) error {
 func listCommand() error {
 	var err error
 
-	if err = js.LoadItems(); err != nil {
+	if err = store.LoadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
 
-	js.ListItems()
+	store.ListItems()
 
 	return nil
 }
@@ -149,17 +149,17 @@ func updateCommand(args []string) error {
 		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
 
-	if err = js.LoadItems(); err != nil {
+	if err = store.LoadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
 
-	item := js.Item{Name: name, Desc: desc, Status: status}
+	item := store.Item{Name: name, Desc: desc, Status: status}
 
-	if err = js.UpdateItem(id, item); err != nil {
+	if err = store.UpdateItem(id, item); err != nil {
 		return errors.Wrap(err, "update item")
 	}
-	js.ListItems()
-	err = js.SaveItems()
+	store.ListItems()
+	err = store.SaveItems()
 
 	return errors.Wrap(err, "save items")
 }
@@ -176,15 +176,15 @@ func deleteCommand(args []string) error {
 		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
 
-	if err = js.LoadItems(); err != nil {
+	if err = store.LoadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
 
-	if err = js.DeleteItem(id); err != nil {
+	if err = store.DeleteItem(id); err != nil {
 		return errors.Wrap(err, "delete item")
 	}
-	js.ListItems()
-	err = js.SaveItems()
+	store.ListItems()
+	err = store.SaveItems()
 
 	return errors.Wrap(err, "save items")
 }
