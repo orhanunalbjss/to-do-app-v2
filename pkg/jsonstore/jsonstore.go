@@ -68,7 +68,7 @@ func LoadItems() (err error) {
 				return errors.Wrap(err, "save items")
 			}
 
-			return
+			return err
 		}
 
 		return errors.Wrapf(err, "open %s", ItemsFilename)

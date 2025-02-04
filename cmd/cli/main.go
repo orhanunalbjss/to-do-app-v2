@@ -22,7 +22,6 @@ func (handler *ContextHandler) Handle(context context.Context, record slog.Recor
 }
 
 func main() {
-	var err error
 	ctx := context.WithValue(context.Background(), "TraceID", uuid.NewString())
 
 	setNewDefaultLogger()
@@ -37,7 +36,7 @@ func main() {
 	cmd, cmdArgs := args[0], args[1:]
 	switch cmd {
 	case "add":
-		if err = addCommand(cmdArgs); err != nil {
+		if err := addCommand(cmdArgs); err != nil {
 			err = errors.Wrap(err, "add command")
 			slog.ErrorContext(ctx, err.Error())
 			return
@@ -45,13 +44,13 @@ func main() {
 
 		slog.InfoContext(ctx, "item added")
 	case "list":
-		if err = listCommand(); err != nil {
+		if err := listCommand(); err != nil {
 			err = errors.Wrap(err, "list command")
 			slog.ErrorContext(ctx, err.Error())
 			return
 		}
 	case "update":
-		if err = updateCommand(cmdArgs); err != nil {
+		if err := updateCommand(cmdArgs); err != nil {
 			err = errors.Wrap(err, "update command")
 			slog.ErrorContext(ctx, err.Error())
 			return
@@ -59,7 +58,7 @@ func main() {
 
 		slog.InfoContext(ctx, "item updated")
 	case "delete":
-		if err = deleteCommand(cmdArgs); err != nil {
+		if err := deleteCommand(cmdArgs); err != nil {
 			err = errors.Wrap(err, "add command")
 			slog.ErrorContext(ctx, err.Error())
 			return
