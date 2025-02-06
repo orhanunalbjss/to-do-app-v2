@@ -14,30 +14,32 @@ type ContextHandler struct {
 	slog.Handler
 }
 
-func (handler *ContextHandler) Handle(context context.Context, record slog.Record) error {
-	if traceId, ok := context.Value("TraceID").(string); ok {
-		record.AddAttrs(slog.String("TraceID", traceId))
+func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	if traceId, ok := ctx.Value(TraceIDHeader).(string); ok {
+		r.AddAttrs(slog.String(TraceIDHeader, traceId))
 	}
-	return handler.Handler.Handle(context, record)
+	return h.Handler.Handle(ctx, r)
 }
 
+const TraceIDHeader = "TraceID"
+
 func main() {
-	ctx := context.WithValue(context.Background(), "TraceID", uuid.NewString())
+	ctx := context.WithValue(context.Background(), TraceIDHeader, uuid.NewString())
 
 	setNewDefaultLogger()
 
 	itemStore := store.NewStore()
 	itemHandler := web.NewWeb(itemStore)
 
-	mux := http.NewServeMux()
+	router := http.NewServeMux()
 
-	mux.HandleFunc("POST /items", itemHandler.HandleHTTPPost)
-	mux.HandleFunc("GET /items", itemHandler.HandleHTTPGet)
-	mux.HandleFunc("GET /items/{id}", itemHandler.HandleHTTPGetWithId)
-	mux.HandleFunc("PUT /items/{id}", itemHandler.HandleHTTPPut)
-	mux.HandleFunc("DELETE /items/{id}", itemHandler.HandleHTTPDelete)
+	router.HandleFunc("POST /items", itemHandler.HandleHTTPPost)
+	router.HandleFunc("GET /items", itemHandler.HandleHTTPGet)
+	router.HandleFunc("GET /items/{id}", itemHandler.HandleHTTPGetWithId)
+	router.HandleFunc("PUT /items/{id}", itemHandler.HandleHTTPPut)
+	router.HandleFunc("DELETE /items/{id}", itemHandler.HandleHTTPDelete)
 
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", traceIdMiddleware(router)); err != nil {
 		slog.ErrorContext(ctx, err.Error())
 	}
 }
@@ -50,4 +52,17 @@ func setNewDefaultLogger() {
 	handler = &ContextHandler{handler}
 
 	slog.SetDefault(slog.New(handler))
+}
+
+func traceIdMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		traceId := r.Header.Get(TraceIDHeader)
+		if _, err := uuid.Parse(traceId); err != nil {
+			traceId = uuid.NewString()
+		}
+
+		ctx := context.WithValue(r.Context(), "TraceID", traceId)
+		w.Header().Set(TraceIDHeader, traceId)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
