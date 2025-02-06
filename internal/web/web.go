@@ -42,7 +42,7 @@ func (web *Web) HandleHTTPPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (web *Web) HandleHTTPGet(w http.ResponseWriter, r *http.Request) {
+func (web *Web) HandleHTTPGet(w http.ResponseWriter, _ *http.Request) {
 	items, err := web.store.ReadAll()
 	if err != nil {
 		web.errorResponse(w, http.StatusInternalServerError, err.Error())
