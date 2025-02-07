@@ -6,7 +6,9 @@
     <title>To-Do Application</title>
 </head>
 <body>
-<h1>To-Do Application</h1>
-<p>A simple to-do application written in Go.</p>
-</body>
-</html>
+
+<ul>
+    {{range .Items}}
+    <li>{{.ID}}-{{.Name}}</li>
+    {{end}}
+</ul>

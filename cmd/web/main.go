@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/google/uuid"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,12 +23,18 @@ func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+type TodoPageData struct {
+	PageTitle string
+	Items     []store.Item
+}
+
 const TraceIDHeader = "TraceID"
 
 func main() {
 	ctx := context.WithValue(context.Background(), TraceIDHeader, uuid.NewString())
 
 	setNewDefaultLogger()
+	tmpl, _ := template.ParseFiles("./web/templates/list.html")
 
 	itemStore := store.NewStore()
 	itemHandler := handler.NewHandler(itemStore)
@@ -36,6 +43,24 @@ func main() {
 
 	fs := http.FileServer(http.Dir("./web/static/"))
 	router.Handle("/about/", http.StripPrefix("/about/", fs))
+
+	router.HandleFunc("GET /list", func(w http.ResponseWriter, r *http.Request) {
+		items, err := itemStore.ReadAll()
+		if err != nil {
+			slog.ErrorContext(ctx, err.Error())
+			return
+		}
+
+		data := TodoPageData{
+			PageTitle: "My TODO list",
+			Items:     items,
+		}
+
+		if err := tmpl.Execute(w, data); err != nil {
+			slog.ErrorContext(ctx, err.Error())
+			return
+		}
+	})
 
 	router.HandleFunc("POST /items", itemHandler.HandleHTTPPost)
 	router.HandleFunc("GET /items", itemHandler.HandleHTTPGet)
