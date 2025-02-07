@@ -10,7 +10,7 @@ import (
 )
 
 type Item struct {
-	Id     string `json:"id"`
+	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Desc   string `json:"description"`
 	Status string `json:"status"`
@@ -20,21 +20,21 @@ func (item Item) String() string {
 	return fmt.Sprintf("Name: %s, Description: %s, Status: %s", item.Name, item.Desc, item.Status)
 }
 
-type ItemId string
+type ItemID string
 
-func NewItemID() ItemId {
-	return ItemId(uuid.New().String())
+func NewItemID() ItemID {
+	return ItemID(uuid.New().String())
 }
 
 type Store struct {
-	items map[ItemId]Item
+	items map[ItemID]Item
 }
 
 const ItemsFilename = "items.json"
 
 func NewStore() *Store {
 	return &Store{
-		items: make(map[ItemId]Item),
+		items: make(map[ItemID]Item),
 	}
 }
 
@@ -44,7 +44,7 @@ func (s *Store) Create(item Item) (Item, error) {
 	}
 
 	id := NewItemID()
-	item.Id = string(id)
+	item.ID = string(id)
 	s.items[id] = item
 
 	if err := s.SaveItems(); err != nil {
@@ -67,7 +67,7 @@ func (s *Store) ReadAll() ([]Item, error) {
 	return items, nil
 }
 
-func (s *Store) Read(id ItemId) (Item, error) {
+func (s *Store) Read(id ItemID) (Item, error) {
 	if err := s.LoadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
@@ -80,7 +80,7 @@ func (s *Store) Read(id ItemId) (Item, error) {
 	return item, nil
 }
 
-func (s *Store) Update(id ItemId, item Item) (Item, error) {
+func (s *Store) Update(id ItemID, item Item) (Item, error) {
 	if err := s.LoadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
@@ -89,7 +89,7 @@ func (s *Store) Update(id ItemId, item Item) (Item, error) {
 		return Item{}, errors.New("item not found")
 	}
 
-	item.Id = string(id)
+	item.ID = string(id)
 	s.items[id] = item
 
 	if err := s.SaveItems(); err != nil {
@@ -99,7 +99,7 @@ func (s *Store) Update(id ItemId, item Item) (Item, error) {
 	return item, nil
 }
 
-func (s *Store) Delete(id ItemId) error {
+func (s *Store) Delete(id ItemID) error {
 	if err := s.LoadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
@@ -125,7 +125,7 @@ func (s *Store) LoadItems() (err error) {
 			return errors.Wrapf(err, "opena %s", ItemsFilename)
 		}
 
-		s.items = make(map[ItemId]Item)
+		s.items = make(map[ItemID]Item)
 
 		if err = s.SaveItems(); err != nil {
 			return errors.Wrap(err, "save items")
@@ -138,9 +138,9 @@ func (s *Store) LoadItems() (err error) {
 	}
 
 	defer func() {
-		closeError := file.Close()
+		closeErr := file.Close()
 		if err == nil {
-			err = errors.Wrapf(closeError, "close %s", ItemsFilename)
+			err = errors.Wrapf(closeErr, "close %s", ItemsFilename)
 		}
 	}()
 
@@ -162,9 +162,9 @@ func (s *Store) SaveItems() (err error) {
 	}
 
 	defer func() {
-		closeError := file.Close()
+		closeErr := file.Close()
 		if err == nil {
-			err = errors.Wrapf(closeError, "close %s", ItemsFilename)
+			err = errors.Wrapf(closeErr, "close %s", ItemsFilename)
 		}
 	}()
 

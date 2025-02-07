@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"log/slog"
 	"os"
-	"to-do-app-v2/internal/cli"
+	"to-do-app-v2/internal/app"
 	"to-do-app-v2/internal/store"
 )
 
@@ -15,8 +15,8 @@ type ContextHandler struct {
 }
 
 func (handler *ContextHandler) Handle(context context.Context, record slog.Record) error {
-	if traceId, ok := context.Value("TraceID").(string); ok {
-		record.AddAttrs(slog.String("TraceID", traceId))
+	if traceID, ok := context.Value("TraceID").(string); ok {
+		record.AddAttrs(slog.String("TraceID", traceID))
 	}
 	return handler.Handler.Handle(context, record)
 }
@@ -26,8 +26,8 @@ func main() {
 
 	setNewDefaultLogger()
 
-	newStore := store.NewStore()
-	newCli := cli.NewCli(newStore)
+	itemStore := store.NewStore()
+	newCli := app.NewCli(itemStore)
 
 	flag.Parse()
 	args := flag.Args()

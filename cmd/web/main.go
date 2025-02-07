@@ -6,8 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"to-do-app-v2/api/handler"
+	"to-do-app-v2/api/middleware"
 	"to-do-app-v2/internal/store"
-	"to-do-app-v2/internal/web"
 )
 
 type ContextHandler struct {
@@ -15,8 +16,8 @@ type ContextHandler struct {
 }
 
 func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
-	if traceId, ok := ctx.Value(TraceIDHeader).(string); ok {
-		r.AddAttrs(slog.String(TraceIDHeader, traceId))
+	if traceID, ok := ctx.Value(TraceIDHeader).(string); ok {
+		r.AddAttrs(slog.String(TraceIDHeader, traceID))
 	}
 	return h.Handler.Handle(ctx, r)
 }
@@ -29,40 +30,27 @@ func main() {
 	setNewDefaultLogger()
 
 	itemStore := store.NewStore()
-	itemHandler := web.NewWeb(itemStore)
+	itemHandler := handler.NewHandler(itemStore)
 
 	router := http.NewServeMux()
 
 	router.HandleFunc("POST /items", itemHandler.HandleHTTPPost)
 	router.HandleFunc("GET /items", itemHandler.HandleHTTPGet)
-	router.HandleFunc("GET /items/{id}", itemHandler.HandleHTTPGetWithId)
+	router.HandleFunc("GET /items/{id}", itemHandler.HandleHTTPGetWithID)
 	router.HandleFunc("PUT /items/{id}", itemHandler.HandleHTTPPut)
 	router.HandleFunc("DELETE /items/{id}", itemHandler.HandleHTTPDelete)
 
-	if err := http.ListenAndServe(":8080", traceIdMiddleware(router)); err != nil {
+	if err := http.ListenAndServe(":8080", middleware.TraceIDMiddleware(router)); err != nil {
 		slog.ErrorContext(ctx, err.Error())
 	}
 }
 
 func setNewDefaultLogger() {
-	var handler slog.Handler
-	handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	var h slog.Handler
+	h = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
 	})
-	handler = &ContextHandler{handler}
+	h = &ContextHandler{h}
 
-	slog.SetDefault(slog.New(handler))
-}
-
-func traceIdMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		traceId := r.Header.Get(TraceIDHeader)
-		if _, err := uuid.Parse(traceId); err != nil {
-			traceId = uuid.NewString()
-		}
-
-		ctx := context.WithValue(r.Context(), "TraceID", traceId)
-		w.Header().Set(TraceIDHeader, traceId)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	slog.SetDefault(slog.New(h))
 }

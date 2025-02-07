@@ -1,4 +1,4 @@
-package cli
+package app
 
 import (
 	"flag"
@@ -67,10 +67,10 @@ func (c *Cli) UpdateCommand(args []string) error {
 		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
 
-	itemId := store.ItemId(id)
+	itemID := store.ItemID(id)
 	item := store.Item{Name: name, Desc: desc, Status: status}
 
-	if _, err := c.store.Update(itemId, item); err != nil {
+	if _, err := c.store.Update(itemID, item); err != nil {
 		return errors.Wrap(err, "update item")
 	}
 
@@ -91,9 +91,9 @@ func (c *Cli) DeleteCommand(args []string) error {
 		return errors.Wrapf(err, "parse arguments: %v", args)
 	}
 
-	itemId := store.ItemId(id)
+	itemID := store.ItemID(id)
 
-	if err := c.store.Delete(itemId); err != nil {
+	if err := c.store.Delete(itemID); err != nil {
 		return errors.Wrap(err, "delete item")
 	}
 
