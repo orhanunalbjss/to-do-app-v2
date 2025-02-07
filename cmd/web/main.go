@@ -34,13 +34,21 @@ func main() {
 
 	router := http.NewServeMux()
 
+	fs := http.FileServer(http.Dir("./web/static/"))
+	router.Handle("/about/", http.StripPrefix("/about/", fs))
+
 	router.HandleFunc("POST /items", itemHandler.HandleHTTPPost)
 	router.HandleFunc("GET /items", itemHandler.HandleHTTPGet)
 	router.HandleFunc("GET /items/{id}", itemHandler.HandleHTTPGetWithID)
 	router.HandleFunc("PUT /items/{id}", itemHandler.HandleHTTPPut)
 	router.HandleFunc("DELETE /items/{id}", itemHandler.HandleHTTPDelete)
 
-	if err := http.ListenAndServe(":8080", middleware.TraceIDMiddleware(router)); err != nil {
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: middleware.TraceIDMiddleware(router),
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		slog.ErrorContext(ctx, err.Error())
 	}
 }
