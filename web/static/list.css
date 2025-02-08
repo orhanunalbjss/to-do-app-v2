@@ -1,0 +1,19 @@
+body {
+    font-family: Arial, sans-serif;
+}
+.outer {
+    margin: 0 auto;
+    width: 50%;
+    text-align: center;
+}
+.inner {
+    display: inline-block;
+    text-align: left;
+}
+ul {
+    list-style: none;
+    padding: 0;
+}
+li:not(:last-child) {
+    margin-bottom: 10px;
+}

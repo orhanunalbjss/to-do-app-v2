@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"to-do-app-v2/internal/store"
@@ -30,7 +31,34 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
-func (h *Handler) HandleHTTPPost(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleAboutPage(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./web/static/about.html")
+}
+
+func (h *Handler) HandleListItemsPage(w http.ResponseWriter, r *http.Request) {
+	items, err := h.service.ReadAll()
+	if err != nil {
+		slog.ErrorContext(r.Context(), err.Error())
+		h.errorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var tmpl *template.Template
+	tmpl, err = template.ParseFiles("./web/templates/list.html")
+	if err != nil {
+		slog.ErrorContext(r.Context(), err.Error())
+		h.errorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err = tmpl.Execute(w, items); err != nil {
+		slog.ErrorContext(r.Context(), err.Error())
+		h.errorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+func (h *Handler) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	var item store.Item
 	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
 		slog.ErrorContext(r.Context(), err.Error())
@@ -54,7 +82,7 @@ func (h *Handler) HandleHTTPPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleHTTPGet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	items, err := h.service.ReadAll()
 	if err != nil {
 		slog.ErrorContext(r.Context(), err.Error())
@@ -70,7 +98,7 @@ func (h *Handler) HandleHTTPGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleHTTPGetWithID(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleGetItemWithID(w http.ResponseWriter, r *http.Request) {
 	id := store.ItemID(r.PathValue("id"))
 	item, err := h.service.Read(id)
 	if err != nil {
@@ -88,7 +116,7 @@ func (h *Handler) HandleHTTPGetWithID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleHTTPPut(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleUpdateItem(w http.ResponseWriter, r *http.Request) {
 	id := store.ItemID(r.PathValue("id"))
 
 	var newItem store.Item
@@ -113,7 +141,7 @@ func (h *Handler) HandleHTTPPut(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleHTTPDelete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleDeleteItem(w http.ResponseWriter, r *http.Request) {
 	id := store.ItemID(r.PathValue("id"))
 
 	if err := h.service.Delete(id); err != nil {
