@@ -39,7 +39,7 @@ func NewStore() *Store {
 }
 
 func (s *Store) Create(item Item) (Item, error) {
-	if err := s.LoadItems(); err != nil {
+	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
 
@@ -47,7 +47,7 @@ func (s *Store) Create(item Item) (Item, error) {
 	item.ID = string(id)
 	s.items[id] = item
 
-	if err := s.SaveItems(); err != nil {
+	if err := s.saveItems(); err != nil {
 		return Item{}, errors.Wrap(err, "save items")
 	}
 
@@ -55,7 +55,7 @@ func (s *Store) Create(item Item) (Item, error) {
 }
 
 func (s *Store) ReadAll() ([]Item, error) {
-	if err := s.LoadItems(); err != nil {
+	if err := s.loadItems(); err != nil {
 		return []Item{}, errors.Wrap(err, "load items")
 	}
 
@@ -68,7 +68,7 @@ func (s *Store) ReadAll() ([]Item, error) {
 }
 
 func (s *Store) Read(id ItemID) (Item, error) {
-	if err := s.LoadItems(); err != nil {
+	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
 
@@ -81,7 +81,7 @@ func (s *Store) Read(id ItemID) (Item, error) {
 }
 
 func (s *Store) Update(id ItemID, item Item) (Item, error) {
-	if err := s.LoadItems(); err != nil {
+	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
 
@@ -92,7 +92,7 @@ func (s *Store) Update(id ItemID, item Item) (Item, error) {
 	item.ID = string(id)
 	s.items[id] = item
 
-	if err := s.SaveItems(); err != nil {
+	if err := s.saveItems(); err != nil {
 		return Item{}, errors.Wrap(err, "save items")
 	}
 
@@ -100,7 +100,7 @@ func (s *Store) Update(id ItemID, item Item) (Item, error) {
 }
 
 func (s *Store) Delete(id ItemID) error {
-	if err := s.LoadItems(); err != nil {
+	if err := s.loadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
 
@@ -110,24 +110,22 @@ func (s *Store) Delete(id ItemID) error {
 
 	delete(s.items, id)
 
-	if err := s.SaveItems(); err != nil {
+	if err := s.saveItems(); err != nil {
 		return errors.Wrap(err, "save items")
 	}
 
 	return nil
 }
 
-func (s *Store) LoadItems() (err error) {
+func (s *Store) loadItems() (err error) {
 	var file *os.File
 	file, err = os.Open(ItemsFilename)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return errors.Wrapf(err, "opena %s", ItemsFilename)
+			return errors.Wrapf(err, "open %s", ItemsFilename)
 		}
 
-		s.items = make(map[ItemID]Item)
-
-		if err = s.SaveItems(); err != nil {
+		if err = s.saveItems(); err != nil {
 			return errors.Wrap(err, "save items")
 		}
 
@@ -154,7 +152,7 @@ func (s *Store) LoadItems() (err error) {
 	return err
 }
 
-func (s *Store) SaveItems() (err error) {
+func (s *Store) saveItems() (err error) {
 	var file *os.File
 	file, err = os.Create(ItemsFilename)
 	if err != nil {
@@ -176,16 +174,4 @@ func (s *Store) SaveItems() (err error) {
 	}
 
 	return err
-}
-
-func (s *Store) PrintItems() error {
-	if err := s.LoadItems(); err != nil {
-		return errors.Wrap(err, "load items")
-	}
-
-	for _, item := range s.items {
-		fmt.Println(item)
-	}
-
-	return nil
 }
