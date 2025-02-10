@@ -117,6 +117,18 @@ func (s *Store) Delete(id ItemID) error {
 	return nil
 }
 
+func (s *Store) PrintItems() error {
+	items, err := s.ReadAll()
+	if err != nil {
+		return errors.Wrap(err, "read items")
+	}
+	for _, item := range items {
+		fmt.Println(item)
+	}
+
+	return nil
+}
+
 func (s *Store) loadItems() (err error) {
 	var file *os.File
 	file, err = os.Open(ItemsFilename)

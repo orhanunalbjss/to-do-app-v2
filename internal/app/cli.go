@@ -2,7 +2,6 @@ package app
 
 import (
 	"flag"
-	"fmt"
 	"github.com/pkg/errors"
 	"to-do-app-v2/internal/store"
 )
@@ -37,7 +36,7 @@ func (c *Cli) AddCommand(args []string) error {
 		return errors.Wrap(err, "create item")
 	}
 
-	if err := c.printItems(); err != nil {
+	if err := c.store.PrintItems(); err != nil {
 		return errors.Wrap(err, "print items")
 	}
 
@@ -45,7 +44,7 @@ func (c *Cli) AddCommand(args []string) error {
 }
 
 func (c *Cli) ListCommand() error {
-	if err := c.printItems(); err != nil {
+	if err := c.store.PrintItems(); err != nil {
 		return errors.Wrap(err, "print items")
 	}
 
@@ -75,7 +74,7 @@ func (c *Cli) UpdateCommand(args []string) error {
 		return errors.Wrap(err, "update item")
 	}
 
-	if err := c.printItems(); err != nil {
+	if err := c.store.PrintItems(); err != nil {
 		return errors.Wrap(err, "print items")
 	}
 
@@ -98,21 +97,8 @@ func (c *Cli) DeleteCommand(args []string) error {
 		return errors.Wrap(err, "delete item")
 	}
 
-	if err := c.printItems(); err != nil {
+	if err := c.store.PrintItems(); err != nil {
 		return errors.Wrap(err, "print items")
-	}
-
-	return nil
-}
-
-func (c *Cli) printItems() error {
-	items, err := c.store.ReadAll()
-	if err != nil {
-		return errors.Wrap(err, "read items")
-	}
-
-	for _, item := range items {
-		fmt.Println(item)
 	}
 
 	return nil

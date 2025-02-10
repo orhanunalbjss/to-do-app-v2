@@ -14,15 +14,17 @@ type ContextHandler struct {
 	slog.Handler
 }
 
-func (handler *ContextHandler) Handle(context context.Context, record slog.Record) error {
-	if traceID, ok := context.Value("TraceID").(string); ok {
-		record.AddAttrs(slog.String("TraceID", traceID))
+func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	if traceID, ok := ctx.Value(TraceIDHeader).(string); ok {
+		r.AddAttrs(slog.String(TraceIDHeader, traceID))
 	}
-	return handler.Handler.Handle(context, record)
+	return h.Handler.Handle(ctx, r)
 }
 
+const TraceIDHeader = "TraceID"
+
 func main() {
-	ctx := context.WithValue(context.Background(), "TraceID", uuid.NewString())
+	ctx := context.WithValue(context.Background(), TraceIDHeader, uuid.NewString())
 
 	setNewDefaultLogger()
 
