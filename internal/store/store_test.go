@@ -3,7 +3,7 @@ package store
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -48,8 +48,8 @@ func Test_Create_ReturnsItem(t *testing.T) {
 	actualItem, err := store.Create(item)
 	actualItem.ID = expectedItem.ID
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItem, actualItem)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItem, actualItem)
 }
 
 func Test_Create_AddsToItems(t *testing.T) {
@@ -69,8 +69,8 @@ func Test_Create_AddsToItems(t *testing.T) {
 
 	_, err := store.Create(item)
 
-	require.NoError(t, err)
-	require.Len(t, store.items, 3)
+	assert.NoError(t, err)
+	assert.Len(t, store.items, 3)
 }
 
 func Test_ReadAll_ReturnsItems(t *testing.T) {
@@ -91,8 +91,8 @@ func Test_ReadAll_ReturnsItems(t *testing.T) {
 
 	actualItems, err := store.ReadAll()
 
-	require.NoError(t, err)
-	require.ElementsMatch(t, expectedItems, actualItems)
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, expectedItems, actualItems)
 }
 
 func Test_ReadAll_DoesNotChangeItems(t *testing.T) {
@@ -113,8 +113,8 @@ func Test_ReadAll_DoesNotChangeItems(t *testing.T) {
 
 	_, err := store.ReadAll()
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItems, store.items)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItems, store.items)
 }
 
 func Test_Read_ReturnsItem(t *testing.T) {
@@ -134,8 +134,8 @@ func Test_Read_ReturnsItem(t *testing.T) {
 
 	actualItem, err := store.Read("id2")
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItem, actualItem)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItem, actualItem)
 }
 
 func Test_Read_DoesNotChangeItems(t *testing.T) {
@@ -156,8 +156,8 @@ func Test_Read_DoesNotChangeItems(t *testing.T) {
 
 	_, err := store.Read("id2")
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItems, store.items)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItems, store.items)
 }
 
 func Test_Update_ReturnsItem(t *testing.T) {
@@ -181,8 +181,8 @@ func Test_Update_ReturnsItem(t *testing.T) {
 
 	actualItem, err := store.Update("id2", item)
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItem, actualItem)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItem, actualItem)
 }
 
 func Test_Update_UpdatesItems(t *testing.T) {
@@ -207,8 +207,8 @@ func Test_Update_UpdatesItems(t *testing.T) {
 
 	_, err := store.Update("id2", item)
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItems, store.items)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItems, store.items)
 }
 
 func Test_Delete_DoesNotReturnError(t *testing.T) {
@@ -224,7 +224,7 @@ func Test_Delete_DoesNotReturnError(t *testing.T) {
 
 	err := store.Delete("id2")
 
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func Test_Delete_RemovesFromItems(t *testing.T) {
@@ -244,6 +244,6 @@ func Test_Delete_RemovesFromItems(t *testing.T) {
 
 	err := store.Delete("id2")
 
-	require.NoError(t, err)
-	require.Equal(t, expectedItems, store.items)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedItems, store.items)
 }
