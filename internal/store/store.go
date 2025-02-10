@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"io/fs"
 	"os"
+	"sync"
 )
 
 type Item struct {
@@ -27,6 +28,7 @@ func NewItemID() ItemID {
 }
 
 type Store struct {
+	sync.Mutex
 	items map[ItemID]Item
 }
 
@@ -39,6 +41,9 @@ func NewStore() *Store {
 }
 
 func (s *Store) Create(item Item) (Item, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
@@ -55,6 +60,9 @@ func (s *Store) Create(item Item) (Item, error) {
 }
 
 func (s *Store) ReadAll() ([]Item, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.loadItems(); err != nil {
 		return []Item{}, errors.Wrap(err, "load items")
 	}
@@ -68,6 +76,9 @@ func (s *Store) ReadAll() ([]Item, error) {
 }
 
 func (s *Store) Read(id ItemID) (Item, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
@@ -81,6 +92,9 @@ func (s *Store) Read(id ItemID) (Item, error) {
 }
 
 func (s *Store) Update(id ItemID, item Item) (Item, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.loadItems(); err != nil {
 		return Item{}, errors.Wrap(err, "load items")
 	}
@@ -100,6 +114,9 @@ func (s *Store) Update(id ItemID, item Item) (Item, error) {
 }
 
 func (s *Store) Delete(id ItemID) error {
+	s.Lock()
+	defer s.Unlock()
+
 	if err := s.loadItems(); err != nil {
 		return errors.Wrap(err, "load items")
 	}
@@ -112,18 +129,6 @@ func (s *Store) Delete(id ItemID) error {
 
 	if err := s.saveItems(); err != nil {
 		return errors.Wrap(err, "save items")
-	}
-
-	return nil
-}
-
-func (s *Store) PrintItems() error {
-	items, err := s.ReadAll()
-	if err != nil {
-		return errors.Wrap(err, "read items")
-	}
-	for _, item := range items {
-		fmt.Println(item)
 	}
 
 	return nil
