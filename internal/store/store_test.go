@@ -26,8 +26,64 @@ func setupTest() func() {
 	}
 }
 
+func Test_ParallelTests(t *testing.T) {
+	t.Cleanup(setupTest())
+
+	data := map[ItemID]Item{
+		"readID":   {"readID", "readName", "readDesc", "readStatus"},
+		"updateID": {"updateID", "updateName", "updateDesc", "updateStatus"},
+		"deleteID": {"deleteID", "deleteName", "deleteDesc", "deleteStatus"},
+	}
+	store := Store{
+		items: data,
+	}
+
+	t.Run("ParallelTests", func(t *testing.T) {
+		t.Run("Create", func(t *testing.T) {
+			t.Parallel()
+			item := Item{
+				Name:   "createID",
+				Desc:   "createDesc",
+				Status: "createStatus",
+			}
+			createdItem, err := store.Create(item)
+			assert.NoError(t, err)
+			assert.Contains(t, store.items, ItemID(createdItem.ID))
+		})
+		t.Run("ReadAll", func(t *testing.T) {
+			t.Parallel()
+			_, err := store.ReadAll()
+			assert.NoError(t, err)
+		})
+		t.Run("Read", func(t *testing.T) {
+			t.Parallel()
+			_, err := store.Read("readID")
+			assert.NoError(t, err)
+		})
+		t.Run("Update", func(t *testing.T) {
+			t.Parallel()
+			item := Item{
+				ID:     "updateID",
+				Name:   "newUpdateID",
+				Desc:   "newUpdateDesc",
+				Status: "newUpdateStatus",
+			}
+			updatedItem, err := store.Update("updateID", item)
+			assert.NoError(t, err)
+			assert.Equal(t, item, updatedItem)
+
+		})
+		t.Run("Delete", func(t *testing.T) {
+			t.Parallel()
+			err := store.Delete("deleteID")
+			assert.NoError(t, err)
+			assert.NotContains(t, store.items, "deleteID")
+		})
+	})
+}
+
 func Test_Create_ReturnsItem(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -53,7 +109,7 @@ func Test_Create_ReturnsItem(t *testing.T) {
 }
 
 func Test_Create_AddsToItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -74,7 +130,7 @@ func Test_Create_AddsToItems(t *testing.T) {
 }
 
 func Test_ReadAll_ReturnsItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -96,7 +152,7 @@ func Test_ReadAll_ReturnsItems(t *testing.T) {
 }
 
 func Test_ReadAll_DoesNotChangeItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -118,7 +174,7 @@ func Test_ReadAll_DoesNotChangeItems(t *testing.T) {
 }
 
 func Test_Read_ReturnsItem(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -139,7 +195,7 @@ func Test_Read_ReturnsItem(t *testing.T) {
 }
 
 func Test_Read_DoesNotChangeItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -161,7 +217,7 @@ func Test_Read_DoesNotChangeItems(t *testing.T) {
 }
 
 func Test_Update_ReturnsItem(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -186,7 +242,7 @@ func Test_Update_ReturnsItem(t *testing.T) {
 }
 
 func Test_Update_UpdatesItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -212,7 +268,7 @@ func Test_Update_UpdatesItems(t *testing.T) {
 }
 
 func Test_Delete_DoesNotReturnError(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -228,7 +284,7 @@ func Test_Delete_DoesNotReturnError(t *testing.T) {
 }
 
 func Test_Delete_RemovesFromItems(t *testing.T) {
-	defer setupTest()()
+	t.Cleanup(setupTest())
 
 	data := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
