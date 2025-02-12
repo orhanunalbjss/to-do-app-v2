@@ -34,9 +34,8 @@ func Test_ParallelTests(t *testing.T) {
 		"updateID": {"updateID", "updateName", "updateDesc", "updateStatus"},
 		"deleteID": {"deleteID", "deleteName", "deleteDesc", "deleteStatus"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	t.Run("ParallelTests", func(t *testing.T) {
 		t.Run("Create", func(t *testing.T) {
@@ -89,9 +88,8 @@ func Test_Create_ReturnsItem(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItem := Item{
 		ID: "id3", Name: "name3", Desc: "desc3", Status: "status3",
@@ -115,9 +113,8 @@ func Test_Create_AddsToItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	item := Item{
 		Name: "name3", Desc: "desc3", Status: "status3",
@@ -136,9 +133,8 @@ func Test_ReadAll_ReturnsItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItems := []Item{
 		{ID: "id1", Name: "name1", Desc: "desc1", Status: "status1"},
@@ -158,9 +154,8 @@ func Test_ReadAll_DoesNotChangeItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItems := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -180,9 +175,8 @@ func Test_Read_ReturnsItem(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItem := Item{
 		ID: "id2", Name: "name2", Desc: "desc2", Status: "status2",
@@ -201,9 +195,8 @@ func Test_Read_DoesNotChangeItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItems := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -223,9 +216,8 @@ func Test_Update_ReturnsItem(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItem := Item{
 		ID: "id2", Name: "name3", Desc: "desc3", Status: "status3",
@@ -248,9 +240,8 @@ func Test_Update_UpdatesItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItems := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},
@@ -274,9 +265,8 @@ func Test_Delete_DoesNotReturnError(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	err := store.Delete("id2")
 
@@ -290,9 +280,8 @@ func Test_Delete_RemovesFromItems(t *testing.T) {
 		"id1": {"id1", "name1", "desc1", "status1"},
 		"id2": {"id2", "name2", "desc2", "status2"},
 	}
-	store := Store{
-		items: data,
-	}
+	store := NewStore()
+	store.items = data
 
 	expectedItems := map[ItemID]Item{
 		"id1": {"id1", "name1", "desc1", "status1"},

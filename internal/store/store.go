@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"io/fs"
 	"os"
-	"sync"
 )
 
 type Item struct {
@@ -27,25 +26,59 @@ func NewItemID() ItemID {
 	return ItemID(uuid.New().String())
 }
 
+type response struct {
+	items []Item
+	item  Item
+	err   error
+}
+
+type request struct {
+	action       string
+	responseChan chan response
+	id           ItemID
+	item         Item
+}
+
 type Store struct {
-	sync.Mutex
-	items map[ItemID]Item
+	items       map[ItemID]Item
+	requestChan chan request
 }
 
 const ItemsFilename = "items.json"
 
 func NewStore() *Store {
-	return &Store{
-		items: make(map[ItemID]Item),
+	s := &Store{
+		items:       make(map[ItemID]Item),
+		requestChan: make(chan request, 100),
+	}
+
+	go s.processRequests()
+
+	return s
+}
+
+func (s *Store) processRequests() {
+	for req := range s.requestChan {
+		switch req.action {
+		case "create":
+			req.responseChan <- s.create(req.item)
+		case "readAll":
+			req.responseChan <- s.readAll()
+		case "read":
+			req.responseChan <- s.read(req.id)
+		case "update":
+			req.responseChan <- s.update(req.id, req.item)
+		case "delete":
+			req.responseChan <- s.delete(req.id)
+		}
 	}
 }
 
-func (s *Store) Create(item Item) (Item, error) {
-	s.Lock()
-	defer s.Unlock()
-
+func (s *Store) create(item Item) response {
 	if err := s.loadItems(); err != nil {
-		return Item{}, errors.Wrap(err, "load items")
+		return response{
+			err: errors.Wrap(err, "load items"),
+		}
 	}
 
 	id := NewItemID()
@@ -53,18 +86,34 @@ func (s *Store) Create(item Item) (Item, error) {
 	s.items[id] = item
 
 	if err := s.saveItems(); err != nil {
-		return Item{}, errors.Wrap(err, "save items")
+		return response{
+			err: errors.Wrap(err, "save items"),
+		}
 	}
 
-	return item, nil
+	return response{
+		item: item,
+	}
 }
 
-func (s *Store) ReadAll() ([]Item, error) {
-	s.Lock()
-	defer s.Unlock()
+func (s *Store) Create(item Item) (Item, error) {
+	responseChan := make(chan response, 1)
+	req := request{
+		action:       "create",
+		responseChan: responseChan,
+		item:         item,
+	}
+	s.requestChan <- req
+	res := <-responseChan
 
+	return res.item, res.err
+}
+
+func (s *Store) readAll() response {
 	if err := s.loadItems(); err != nil {
-		return []Item{}, errors.Wrap(err, "load items")
+		return response{
+			err: errors.Wrap(err, "load items"),
+		}
 	}
 
 	items := make([]Item, 0, len(s.items))
@@ -72,66 +121,131 @@ func (s *Store) ReadAll() ([]Item, error) {
 		items = append(items, item)
 	}
 
-	return items, nil
+	return response{
+		items: items,
+	}
 }
 
-func (s *Store) Read(id ItemID) (Item, error) {
-	s.Lock()
-	defer s.Unlock()
+func (s *Store) ReadAll() ([]Item, error) {
+	responseChan := make(chan response, 1)
+	req := request{
+		action:       "readAll",
+		responseChan: responseChan,
+	}
+	s.requestChan <- req
+	res := <-responseChan
 
+	return res.items, res.err
+}
+
+func (s *Store) read(id ItemID) response {
 	if err := s.loadItems(); err != nil {
-		return Item{}, errors.Wrap(err, "load items")
+		return response{
+			err: errors.Wrap(err, "load items"),
+		}
 	}
 
 	item, found := s.items[id]
 	if !found {
-		return Item{}, errors.New("item not found")
+		return response{
+			err: errors.Errorf("item '%s' not found", id),
+		}
 	}
 
-	return item, nil
+	return response{
+		item: item,
+	}
 }
 
-func (s *Store) Update(id ItemID, item Item) (Item, error) {
-	s.Lock()
-	defer s.Unlock()
+func (s *Store) Read(id ItemID) (Item, error) {
+	responseChan := make(chan response, 1)
+	req := request{
+		action:       "read",
+		responseChan: responseChan,
+		id:           id,
+	}
+	s.requestChan <- req
+	res := <-responseChan
 
+	return res.item, res.err
+}
+
+func (s *Store) update(id ItemID, item Item) response {
 	if err := s.loadItems(); err != nil {
-		return Item{}, errors.Wrap(err, "load items")
+		return response{
+			err: errors.Wrap(err, "load items"),
+		}
 	}
 
 	if _, found := s.items[id]; !found {
-		return Item{}, errors.New("item not found")
+		return response{
+			err: errors.Errorf("item '%s' not found", id),
+		}
 	}
 
 	item.ID = string(id)
 	s.items[id] = item
 
 	if err := s.saveItems(); err != nil {
-		return Item{}, errors.Wrap(err, "save items")
+		return response{
+			err: errors.Wrap(err, "save items"),
+		}
 	}
 
-	return item, nil
+	return response{
+		item: item,
+	}
 }
 
-func (s *Store) Delete(id ItemID) error {
-	s.Lock()
-	defer s.Unlock()
+func (s *Store) Update(id ItemID, item Item) (Item, error) {
+	responseChan := make(chan response, 1)
+	req := request{
+		action:       "update",
+		responseChan: responseChan,
+		id:           id,
+		item:         item,
+	}
+	s.requestChan <- req
+	res := <-responseChan
 
+	return res.item, res.err
+}
+
+func (s *Store) delete(id ItemID) response {
 	if err := s.loadItems(); err != nil {
-		return errors.Wrap(err, "load items")
+		return response{
+			err: errors.Wrap(err, "load items"),
+		}
 	}
 
 	if _, found := s.items[id]; !found {
-		return errors.New("item not found")
+		return response{
+			err: errors.Errorf("item '%s' not found", id),
+		}
 	}
 
 	delete(s.items, id)
 
 	if err := s.saveItems(); err != nil {
-		return errors.Wrap(err, "save items")
+		return response{
+			err: errors.Wrap(err, "save items"),
+		}
 	}
 
-	return nil
+	return response{}
+}
+
+func (s *Store) Delete(id ItemID) error {
+	responseChan := make(chan response, 1)
+	req := request{
+		action:       "delete",
+		responseChan: responseChan,
+		id:           id,
+	}
+	s.requestChan <- req
+	res := <-responseChan
+
+	return res.err
 }
 
 func (s *Store) loadItems() (err error) {
